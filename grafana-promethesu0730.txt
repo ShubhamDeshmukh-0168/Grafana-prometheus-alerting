@@ -1,0 +1,87 @@
+=======Prometheus=======
+
+
+sudo dnf update -y
+sudo dnf install wget tar -y
+
+
+cd /tmp
+
+wget https://github.com/prometheus/prometheus/releases/download/v3.13.2/prometheus-3.13.2.linux-amd64.tar.gz
+
+tar -xvf prometheus-3.13.2.linux-amd64.tar.gz
+
+cd prometheus-3.13.2.linux-amd64
+
+./prometheus --config.file=prometheus.yml
+
+
+
+http://EC2-PUBLIC-IP:9090
+
+
+
+====== Grafana ==========
+
+sudo tee /etc/yum.repos.d/grafana.repo <<EOF
+[grafana]
+name=grafana
+baseurl=https://rpm.grafana.com
+repo_gpgcheck=1
+enabled=1
+gpgcheck=1
+gpgkey=https://rpm.grafana.com/gpg.key
+sslverify=1
+sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+EOF
+
+
+sudo dnf install grafana -y
+
+
+sudo systemctl enable --now grafana-server
+
+sudo systemctl status grafana-server
+
+http://<EC2-PUBLIC-IP>:3000
+
+
+
+==============Node Exporter =======
+
+# ============ 2. Install Node Exporter ============
+echo "[*] Creating node_exporter user..."
+sudo useradd --no-create-home --shell /bin/false node_exporter || true
+
+echo "[*] Downloading Node Exporter..."
+cd /tmp
+curl -LO https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.8.2.linux-amd64.tar.gz
+tar -xvf node_exporter-1.8.2.linux-amd64.tar.gz
+cd node_exporter-1.8.2.linux-amd64
+
+echo "[*] Installing Node Exporter binary..."
+sudo cp node_exporter /usr/local/bin/
+sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
+
+echo "[*] Creating systemd service for Node Exporter..."
+sudo tee /etc/systemd/system/node_exporter.service >/dev/null <<'EOF'
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+ExecStart=/usr/local/bin/node_exporter
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reexec
+sudo systemctl enable --now node_exporter
+
+
+
+
